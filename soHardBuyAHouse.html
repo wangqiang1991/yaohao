@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>买房难啊买房难</title>
+  <style>
+    *{
+      margin: 0;
+      padding: 0;
+      font-size: 13px;
+      color: white;
+      font-family: "Microsoft YaHei";
+    }
+    #content{
+      width: 600px;
+      height: auto;
+      background: #c2c2c2;
+      margin: auto;
+    }
+    input{
+      width: 140px;
+      color: black;
+    }
+    button{
+      color: black;
+      cursor: pointer;
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+    p.title{
+      font-size: 18px;
+      color: #333;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    #result,.count{
+      text-align: center;
+      font-size: 18px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    span{
+      font-size: 18px;
+      color: red;
+    }
+    table{
+      width: 100%;
+      height: auto;
+    }
+    th{
+      font-size: 16px;
+    }
+    th,td{
+      text-align: center;
+    }
+    tr.choied{
+      background: green;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="content">
+    <p class="title">房管局模拟摇号系统</p>
+    <p class="count">摇号次数: <span id="count">0</span> 中标次数: <span id="choiceCount" style="color: green;">0</span></p>
+    <div style="text-align: center;">
+      <input type="number" placeholder="请输入审核通过人数" id="userNumber" value="100">
+      <input type="number" placeholder="请输入售房套数" id="houseNumber" value="6">
+      <input type="text" placeholder="请输入你的选房号" id="yourNumber" value="B00002">
+      <button id="start">开始摇号</button>
+    </div>
+
+    <p id="result"></p>
+   
+    <table>
+      <thead>
+        <tr>
+          <th>选房顺序</th>
+          <th>选房号</th>
+        </tr>
+      </thead>
+      <tbody id="ResultTbody">
+
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+  let count = 0;  
+  let choiceCount = 0;
+
+  function padding(num, length) {
+        if((num + "").length >= length) {
+            return num;
+        }
+        return padding("0" + num, length)
+  }
+
+  document.getElementById("start").onclick = function(){
+    let userNumber = +document.getElementById("userNumber").value;
+    let houseNumber = +document.getElementById("houseNumber").value;
+    let yourNumber = document.getElementById("yourNumber").value;
+    let ResultTbody = document.getElementById("ResultTbody");
+    let yourNumberTag;
+    let yourNumberCount;
+    let youAreChoiced = false;
+    let youAreChoicedNumber = null;
+
+    let userArray = [];
+    let randomArray = [];
+    let resultArray = [];
+    let randomSet = new Set();
+
+    document.getElementById("ResultTbody").innerHTML = "";
+    document.getElementById("result").innerHTML = "";
+
+    for ( let i = 0; i < yourNumber.length; i++) {
+      if( /^\d$/i.test( yourNumber.slice(i,i+1)) ) {
+        yourNumberTag = yourNumber.slice(0,i);
+        yourNumberCount = yourNumber.slice(i);
+        break;
+      }
+    }
+
+    for (let i = 0; i < userNumber; i++) {
+      userArray.push(yourNumberTag + padding(i+1,5));
+    }  
+    
+    while ( randomSet.size != userNumber){
+      randomSet.add( Math.floor(Math.random() * userNumber) );
+    }
+    for (let i of randomSet){
+      randomArray.push(i)
+    }
+    
+    for ( let i = 0; i < randomArray.length; i++) {
+      var resultObj = {};
+      resultObj.number = i+1;
+      resultObj.user = userArray[randomArray[i]];
+      resultArray.push(resultObj);
+      if ( i < houseNumber) {
+          if ( userArray[randomArray[i]] == yourNumber) {
+            youAreChoiced = true;
+            choiceCount++;
+          } 
+      }
+      if ( userArray[randomArray[i]] == yourNumber ) {
+        youAreChoicedNumber = i+1;
+      }
+    }
+
+    for ( let i = 0; i < resultArray.length; i++) {
+      var tr = document.createElement("tr");
+      if ( i < houseNumber ){
+        tr.innerHTML  = `<tr><td> ${resultArray[i].number} </td> <td> ${resultArray[i].user} </td></tr>`;
+        tr.style.backgroundColor="green";
+      } else {
+        tr.innerHTML = `<tr><td> ${resultArray[i].number} </td> <td> ${resultArray[i].user} </td></tr>`;
+        tr.style.backgroundColor="#999";
+      }
+      ResultTbody.appendChild(tr);
+    }
+
+    if ( youAreChoiced ) {
+      document.getElementById("result").innerHTML = "恭喜你,该次摇号你中标了,你的选房顺序为 "+youAreChoicedNumber;
+      document.getElementById("result").style.color = "green";
+    } else {
+      document.getElementById("result").innerHTML = "很遗憾,该次摇号你未中标,你的选房顺序为 "+youAreChoicedNumber;
+      document.getElementById("result").style.color = "red";
+    }
+
+    count ++;
+    document.getElementById("count").innerHTML = count;
+    document.getElementById("choiceCount").innerHTML = choiceCount;
+
+  }
+  </script>
+
+</body>
+</html>

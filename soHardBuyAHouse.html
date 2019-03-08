@@ -1,180 +1,500 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-cn">
 <head>
   <meta charset="UTF-8">
-  <title>买房难啊买房难</title>
+  <title>成都购房模拟摇号系统2.0</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
   <style>
     *{
       margin: 0;
       padding: 0;
-      font-size: 13px;
-      color: white;
-      font-family: "Microsoft YaHei";
     }
-    #content{
-      width: 600px;
+    html{
+      background: #f2f2f2;
+    }
+    #app{
+      width: 1000px;
       height: auto;
-      background: #c2c2c2;
       margin: auto;
+      padding-top: 20px;
     }
-    input{
-      width: 140px;
-      color: black;
-    }
-    button{
-      color: black;
-      cursor: pointer;
-      padding-left: 5px;
-      padding-right: 5px;
-    }
-    p.title{
-      font-size: 18px;
-      color: #333;
+    h3{
       text-align: center;
-      margin-bottom: 10px;
-    }
-    #result,.count{
-      text-align: center;
-      font-size: 18px;
-      margin-top: 10px;
-      margin-bottom: 10px;
-    }
-    span{
-      font-size: 18px;
-      color: red;
-    }
-    table{
-      width: 100%;
-      height: auto;
-    }
-    th{
-      font-size: 16px;
-    }
-    th,td{
-      text-align: center;
-    }
-    tr.choied{
-      background: green;
     }
   </style>
 </head>
 <body>
-
-  <div id="content">
-    <p class="title">房管局模拟摇号系统</p>
-    <p class="count">摇号次数: <span id="count">0</span> 中标次数: <span id="choiceCount" style="color: green;">0</span></p>
-    <div style="text-align: center;">
-      <input type="number" placeholder="请输入审核通过人数" id="userNumber" value="100">
-      <input type="number" placeholder="请输入售房套数" id="houseNumber" value="6">
-      <input type="text" placeholder="请输入你的选房号" id="yourNumber" value="B00002">
-      <button id="start">开始摇号</button>
-    </div>
-
-    <p id="result"></p>
-   
-    <table>
-      <thead>
-        <tr>
-          <th>选房顺序</th>
-          <th>选房号</th>
-        </tr>
-      </thead>
-      <tbody id="ResultTbody">
-
-      </tbody>
-    </table>
+  <div id="app">
+    <el-card class="box-card">
+      <div slot="header" class="clearfix">
+        <h3>成都购房模拟摇号系统2.0</h3>
+      </div>
+      <div  class="text item">
+        <el-row :gutter="20">
+          <el-col :span="8">摇号次数:<el-button type="text">{{historyData.allCount}}</el-button><el-button @click="historyDialog = true;" size="small" type="primary">查看结果</el-button></el-col>
+          <el-col :span="8">未中标次数:<el-button type="text">{{historyData.noChoice}}</el-button></el-col>
+          <el-col :span="8">中标次数:<el-button type="text">{{historyData.isChoice}}</el-button></el-col>
+        </el-row>
+        <h3 style="margin: 20px 0;">初始数据录入</h3>
+        <el-row :gutter="20">
+          <el-col :span="8">准售房源总套数:<el-input-number v-model="allHouseCount" :min="1" :max="10000" ></el-input-number></el-col>
+          <el-col :span="8">分配给棚改套数:<el-input-number v-model="shedReformCount" :min="0" :max="5000" ></el-input-number></el-col>
+          <el-col :span="8">分配给刚需套数:<el-input-number v-model="rigidDemandCount" :min="0" :max="5000" ></el-input-number></el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top:20px;">
+          <el-col :span="8">棚改复审通过数:<el-input-number v-model="shedReformNumber" :min="0" :max="99999" ></el-input-number></el-col>
+          <el-col :span="8">刚需复审通过数:<el-input-number v-model="rigidDemandNumber" :min="0" :max="99999" ></el-input-number></el-col>
+          <el-col :span="8">普通复审通过数:<el-input-number v-model="normalNumber" :min="1" :max="99999" ></el-input-number></el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top:20px;">
+          <el-col :span="8">你的类型:  
+            <el-select v-model="yourType" placeholder="请选择你的类型">
+              <el-option
+                v-for="item in type"
+                :key="item.type"
+                :label="item.name"
+                :value="item.type">
+              </el-option>
+            </el-select>
+          </el-col>
+          <el-col :span="8">你的选房号:<el-input style="width: 60%;" v-model="yourNumber" maxlength="6" ></el-input></el-col>
+        </el-row>
+        <div style="margin:40px 0;text-align: center;">
+           <el-button  style="width:300px " type="primary" @click="start">开始摇号</el-button>
+        </div>
+        <el-tabs v-model="activeName">
+          <el-tab-pane label="棚改安置结果" name="1">
+            <el-table 
+              :data="shedReformData"
+              border 
+              fit
+              highlight-current-row
+              style="width: 100%">
+              <el-table-column
+                type="index"
+                label="选房顺序"
+                width="120"
+                align="center">
+              </el-table-column>
+              <el-table-column
+                label="选房号"
+                prop="number"
+                align="center">
+              </el-table-column>
+              <el-table-column
+                label="是否中标"
+                align="center">
+                <template slot-scope="scope">
+                  <span style="color: green" v-if="scope.$index < shedReformIndex">中标</span>
+                  <span style="color: red" v-else>未中标</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+          <el-tab-pane label="刚需家庭结果" name="2">
+            <el-table
+              :data="rigidDemandData"
+              border 
+              fit
+              highlight-current-row
+              style="width: 100%">
+              <el-table-column
+                type="index"
+                width="120"
+                label="选房顺序"
+                align="center">
+              </el-table-column>
+              <el-table-column
+                label="选房号"
+                prop="number"
+                align="center">
+              </el-table-column>
+              <el-table-column
+                label="是否中标"
+                align="center">
+                <template slot-scope="scope">
+                  <span style="color: green" v-if="scope.$index < rigidDemandIndex">中标</span>
+                  <span style="color: red" v-else>未中标</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+          <el-tab-pane label="普通用户结果" name="3">
+            <el-table
+              :data="normalData"
+              border 
+              fit
+              highlight-current-row
+              style="width: 100%">
+              <el-table-column
+                type="index"
+                width="120"
+                label="选房顺序"
+                align="center">
+              </el-table-column>
+              <el-table-column
+                label="选房号"
+                prop="number"
+                align="center">
+              </el-table-column>
+              <el-table-column
+                label="是否中标"
+                align="center">
+                <template slot-scope="scope">
+                  <span style="color: green" v-if="scope.$index < normalIndex">中标</span>
+                  <span style="color: red" v-else>未中标</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </el-card>
+    <el-dialog
+      title="摇号结果"
+      :visible.sync="dialogVisible"
+      width="50%">
+      <div v-if="resultData.isChoice">
+        <img src="./success.png" style="display: block;margin: auto;">
+        <p style="text-align: center;margin-top: 20px;">
+          <span>恭喜你！中标了你的选房顺序为:</span>
+          <span v-if="resultData.type == 1" style="color: #f75151;">棚改</span>
+          <span v-if="resultData.type == 2" style="color: #f75151;">刚需</span>
+          <span v-if="resultData.type == 3" style="color: #f75151;">普通</span>
+          <span style="color: red;">{{resultData.index}}</span>
+        </p>
+      </div>
+      <div v-else>
+        <img src="./fail.png" style="display: block;margin: auto;">
+        <p style="text-align: center;margin-top: 20px;">
+          <span>很遗憾！该次未中标选房顺序为:</span>
+          <span v-if="resultData.type == 1" style="color: #f75151;">棚改</span>
+          <span v-if="resultData.type == 2" style="color: #f75151;">刚需</span>
+          <span v-if="resultData.type == 3" style="color: #f75151;">普通</span>
+          <span style="color: red;">{{resultData.index}}</span>
+        </p>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">关 闭</el-button>
+      </span>
+    </el-dialog>
+    <el-dialog
+      title="摇号结果"
+      :visible.sync="historyDialog"
+      width="50%">
+      <div>
+        <el-table
+          :data="historyData.choiceData"
+          border 
+          fit
+          highlight-current-row
+          style="width: 100%">
+          <el-table-column
+            label="是否中标"
+            align="center">
+            <template slot-scope="scope">
+              <span style="color: green" v-if="scope.row.isChoice">中标</span>
+              <span style="color: red" v-else>未中标</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="index"
+            width="120"
+            label="选房顺序"
+            align="center">
+          </el-table-column>
+          <el-table-column
+            label="你的选房号"
+            prop="number"
+            align="center">
+          </el-table-column>
+          <el-table-column
+            label="选房类型"
+            align="center">
+            <template slot-scope="scope">
+              <span v-if="scope.row.type  == 1">棚改</span>
+              <span v-if="scope.row.type  == 2">刚需</span>
+              <span v-if="scope.row.type  == 3">普通</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="historyDialog = false">关 闭</el-button>
+      </span>
+    </el-dialog>
   </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
   <script>
-  let count = 0;  
-  let choiceCount = 0;
+    new Vue({
+      el: '#app',
+      data: {
+        historyDialog:false,
+        dialogVisible:false,
+        type:[{name:"棚改安置",type:1},{name:"刚需家庭",type:2},{name:"普通家庭",type:3}],   
+        historyData:{ 
+          allCount:0,
+          isChoice:0,
+          noChoice:0,
+          choiceData:[]
+        },
+        resultData:{
+          index:0,
+          isChoice:null,
+          type:null
+        },
+        allHouseCount:100,
+        shedReformCount:10,
+        rigidDemandCount:45,
+        shedReformNumber:10,
+        rigidDemandNumber:100,
+        normalNumber:200,
+        shedReformNumberData:[],
+        rigidDemandNumberData:[],
+        normalNumberData:[],
+        shedReformIndex:0,
+        rigidDemandIndex:0,
+        normalIndex:0,
+        yourType:2,
+        yourNumber:"B00002",
+        activeName:null,
+        shedReformData:[],
+        rigidDemandData:[],
+        normalData:[],
+        temp:null,
+      },
+      methods:{
+        check:function() {
+          if (this.shedReformCount > this.allHouseCount) {
+            ELEMENT.Message({type:"warning",message:"分配给棚改套数不能大于准售房源总套数!"})
+            return false;
+          }
 
-  function padding(num, length) {
-        if((num + "").length >= length) {
-            return num;
+          if (this.rigidDemandCount > this.allHouseCount) {
+            ELEMENT.Message({type:"warning",message:"分配给刚需套数不能大于准售房源总套数!"})
+            return false;
+          }
+
+          if ((this.rigidDemandCount+this.shedReformCount) > this.allHouseCount) {
+            ELEMENT.Message({type:"warning",message:"分配给棚改和刚需套数总和不能大于准售房源总套数!"})
+            return false;
+          }
+
+          if (this.shedReformNumber > this.shedReformCount) {
+            ELEMENT.Message({type:"warning",message:"棚改复审通过数不能大于分配给棚改的套数!"})
+            return false;
+          }          
+
+          let type = this.yourNumber.slice(0,1);
+          if (this.yourType == 1 && type != "A") {
+            ELEMENT.Message({type:"warning",message:"棚改安置类型的选房号首字母为A!"})
+            return false;
+          }
+
+          if (this.yourType == 2 && type != "B") {
+            ELEMENT.Message({type:"warning",message:"刚需家庭类型的选房号首字母为B!"})
+            return false;
+          }
+
+          if (this.yourType == 3 && type != "C") {
+            ELEMENT.Message({type:"warning",message:"普通家庭类型的选房号首字母为C!"})
+            return false;
+          }
+          return true;
+        },
+        start:function() {
+          if(this.check()){
+            this.dialogVisible = false;
+            this.temp = this.allHouseCount;
+            if (this.shedReformNumber > 0) {
+              this.createHouseNumber(this.shedReformNumber,1);
+            } else if (this.rigidDemandNumber > 0) {
+              this.createHouseNumber(this.rigidDemandNumber,2);
+            } else {
+              this.createHouseNumber(this.normalNumber,3);
+            }
+          }
+        },
+        createHouseNumber:function(count,type) {
+          //生成选房号
+          let arr = [];
+          
+          for (let i = 1; i < count + 1; i++) {
+            let number = "";
+            if (i < 10) {
+              number = "0000" + i;
+            } else if(i < 100){
+              number = "000" + i;
+            } else if(i < 1000){
+              number = "00" + i;
+            } else if(i < 10000){
+              number = "0" + i;
+            } else {
+              number = "" + i;
+            }   
+
+            if (type == 1) {
+              arr.push("A"+number);
+            } else if(type == 2){
+              arr.push("B"+number);
+            } else {
+              arr.push("C"+number);
+            }
+          }
+
+          if(type == 1) {
+            this.shedReformNumberData = arr;
+            this.setShedReform();
+          } else if (type == 2) {
+            this.rigidDemandNumberData = arr;
+            this.setRigidDemand();
+          } else {
+            this.normalNumberData = arr;
+            this.setnormal();
+          }
+        },
+        createRandomArray:function(count) {
+          //生成随机数组
+          let number = count;
+          let randomArray = [];
+          for(let i = 0; i < count; i++) {
+            randomArray.push(i)
+          }
+          while(number){
+            let number1 = Math.floor(Math.random() * count);
+            let number2 = Math.floor(Math.random() * count);
+            if (number1 != number2) {
+              let tem = randomArray[number1];
+              randomArray[number1] = randomArray[number2];
+              randomArray[number2] = tem;
+              number--;  
+            }
+          }
+          return randomArray;
+        },
+        setShedReform:function() {
+          //生成棚改数据
+          let resultArry = [];
+          let randomArray = null;
+          let count =  (this.shedReformNumber < this.shedReformCount) ? this.shedReformNumber : this.shedReformCount;
+          this.shedReformIndex = count;
+          randomArray = this.createRandomArray(count)
+          for (let i = 0; i < randomArray.length;  i++){
+            resultArry.push({number:this.shedReformNumberData[randomArray[i]]});
+          }
+          this.shedReformData = resultArry;
+          this.allHouseCount = this.allHouseCount - count;
+          if (this.rigidDemandNumber > 0) {
+            this.createHouseNumber(this.rigidDemandNumber,2);
+          } else {
+            this.createHouseNumber(this.normalNumber,3);
+          }
+        },
+        setRigidDemand:function() {
+          //生成刚需数据
+          let resultArry = [];
+          let randomArray = null;
+          let count =  (this.rigidDemandNumber < this.rigidDemandCount) ? this.rigidDemandNumber : this.rigidDemandCount;
+          this.rigidDemandIndex = count;
+          randomArray = this.createRandomArray(this.rigidDemandNumber)
+          for (let i = 0; i < randomArray.length;  i++){
+            resultArry.push({number:this.rigidDemandNumberData[randomArray[i]]});
+          }
+          this.rigidDemandData = resultArry;
+          this.allHouseCount = this.allHouseCount - count;    
+          this.createHouseNumber(this.normalNumber,3);
+        },
+        setnormal:function() {
+          //合并b剩余数据 生成普通数据
+          let bCount = 0;
+          let bArray = [];
+          let resultArry = [];
+          let randomArray = null;
+          if (this.rigidDemandNumber > this.rigidDemandCount) {
+            bCount = this.rigidDemandNumber - this.rigidDemandCount;
+            for(let i = this.rigidDemandCount;i < this.rigidDemandData.length; i++){
+              bArray.push(this.rigidDemandData[i].number)
+            }
+          }
+          this.normalIndex = this.allHouseCount;
+          this.allHouseCount = this.temp;
+          let cCount = this.normalNumber;
+          let cArray = this.normalNumberData;
+          if (bCount > 0) {
+            cCount = bCount + cCount;
+            cArray = cArray.concat(bArray)
+          }
+          randomArray = this.createRandomArray(cCount)
+          for (let i = 0; i < randomArray.length;  i++){
+            resultArry.push({number:cArray[randomArray[i]]});
+          }
+          this.normalData = resultArry;
+          this.myNumberIsChoice();
+        },
+        myNumberIsChoice:function() {
+          //判断我的号码
+          let flag = false;
+          let arr = null;
+          if (this.yourType == 1) {
+            arr = this.shedReformData;
+            flag = this.filterArray(arr,this.shedReformIndex,1);
+          } else if (this.yourType == 2) {
+            arr = this.rigidDemandData;
+            flag = this.filterArray(arr,this.rigidDemandIndex,2);
+            if (!flag) {
+              arr = this.normalData;
+              flag = this.filterArray(arr,this.normalIndex,3);
+            }
+          } else {
+            arr = this.normalData;
+            flag = this.filterArray(arr,this.normalIndex,3);
+          }
+
+          this.historyData.allCount++;
+          if (flag) {
+            this.historyData.isChoice++;
+            this.resultData.isChoice = true;
+          } else {  
+            this.historyData.noChoice++;
+            this.resultData.isChoice = false;
+            let failArray = (this.yourType == 2) ? this.rigidDemandData : this.normalData;
+            for(let i = 0; i < failArray.length; i++){
+              if (failArray[i].number == this.yourNumber) {
+                let obj = {};
+                obj.index = i+1;
+                obj.type = this.yourType;
+                obj.isChoice = false;
+                obj.number = this.yourNumber;
+                this.historyData.choiceData.push(obj);
+                this.resultData.index = i+1;
+                this.resultData.type = this.yourType;
+              }
+            }  
+          }
+
+          this.activeName = this.yourType + "";
+          this.dialogVisible = true;          
+        },
+        filterArray:function(arr,index,type) {
+          //封装函数
+          for(let i = 0; i < arr.length; i++){
+            if ((arr[i].number == this.yourNumber) && (i < index)) {
+              let obj = {};
+              obj.index = i+1;
+              obj.type = type;
+              obj.isChoice = true;
+              obj.number = this.yourNumber;
+              this.historyData.choiceData.push(obj);
+              this.resultData.index = i+1;
+              this.resultData.type = type;
+              return true;
+            }
+          }  
+          return false;
         }
-        return padding("0" + num, length)
-  }
-
-  document.getElementById("start").onclick = function(){
-    let userNumber = +document.getElementById("userNumber").value;
-    let houseNumber = +document.getElementById("houseNumber").value;
-    let yourNumber = document.getElementById("yourNumber").value;
-    let ResultTbody = document.getElementById("ResultTbody");
-    let yourNumberTag;
-    let yourNumberCount;
-    let youAreChoiced = false;
-    let youAreChoicedNumber = null;
-
-    let userArray = [];
-    let randomArray = [];
-    let resultArray = [];
-    let randomSet = new Set();
-
-    document.getElementById("ResultTbody").innerHTML = "";
-    document.getElementById("result").innerHTML = "";
-
-    for ( let i = 0; i < yourNumber.length; i++) {
-      if( /^\d$/i.test( yourNumber.slice(i,i+1)) ) {
-        yourNumberTag = yourNumber.slice(0,i);
-        yourNumberCount = yourNumber.slice(i);
-        break;
       }
-    }
-
-    for (let i = 0; i < userNumber; i++) {
-      userArray.push(yourNumberTag + padding(i+1,5));
-    }  
-    
-    while ( randomSet.size != userNumber){
-      randomSet.add( Math.floor(Math.random() * userNumber) );
-    }
-    for (let i of randomSet){
-      randomArray.push(i)
-    }
-    
-    for ( let i = 0; i < randomArray.length; i++) {
-      var resultObj = {};
-      resultObj.number = i+1;
-      resultObj.user = userArray[randomArray[i]];
-      resultArray.push(resultObj);
-      if ( i < houseNumber) {
-          if ( userArray[randomArray[i]] == yourNumber) {
-            youAreChoiced = true;
-            choiceCount++;
-          } 
-      }
-      if ( userArray[randomArray[i]] == yourNumber ) {
-        youAreChoicedNumber = i+1;
-      }
-    }
-
-    for ( let i = 0; i < resultArray.length; i++) {
-      var tr = document.createElement("tr");
-      if ( i < houseNumber ){
-        tr.innerHTML  = `<tr><td> ${resultArray[i].number} </td> <td> ${resultArray[i].user} </td></tr>`;
-        tr.style.backgroundColor="green";
-      } else {
-        tr.innerHTML = `<tr><td> ${resultArray[i].number} </td> <td> ${resultArray[i].user} </td></tr>`;
-        tr.style.backgroundColor="#999";
-      }
-      ResultTbody.appendChild(tr);
-    }
-
-    if ( youAreChoiced ) {
-      document.getElementById("result").innerHTML = "恭喜你,该次摇号你中标了,你的选房顺序为 "+youAreChoicedNumber;
-      document.getElementById("result").style.color = "green";
-    } else {
-      document.getElementById("result").innerHTML = "很遗憾,该次摇号你未中标,你的选房顺序为 "+youAreChoicedNumber;
-      document.getElementById("result").style.color = "red";
-    }
-
-    count ++;
-    document.getElementById("count").innerHTML = count;
-    document.getElementById("choiceCount").innerHTML = choiceCount;
-
-  }
+    })
   </script>
-
 </body>
 </html>
